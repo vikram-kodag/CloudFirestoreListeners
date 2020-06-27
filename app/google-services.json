@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "782046903460",
+    "firebase_url": "https://cloudfirestorelisteners.firebaseio.com",
+    "project_id": "cloudfirestorelisteners",
+    "storage_bucket": "cloudfirestorelisteners.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:782046903460:android:030b8b4d2174d200163a31",
+        "android_client_info": {
+          "package_name": "com.vk.cloudfirestorelisteners"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "782046903460-2790iquik1s21hdsnv78iec2u40k4mjs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfkqAnjFrOTkTMaeNVHbkA2BExewjX6Ow"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "782046903460-2790iquik1s21hdsnv78iec2u40k4mjs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
