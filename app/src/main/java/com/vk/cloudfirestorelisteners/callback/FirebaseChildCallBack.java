@@ -8,7 +8,5 @@ public abstract class FirebaseChildCallBack {
 
     public abstract void onChildRemoved(Object object);
 
-    public abstract void onChildMoved(Object object);
-
     public abstract void onCancelled(Object object);
 }

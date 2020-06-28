@@ -1,199 +1,281 @@
 package com.vk.cloudfirestorelisteners.firebase;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-import com.google.firebase.database.ChildEventListener;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.Query;
-import com.google.firebase.database.ValueEventListener;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.MetadataChanges;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.WriteBatch;
 import com.vk.cloudfirestorelisteners.callback.CallBack;
 import com.vk.cloudfirestorelisteners.callback.FirebaseChildCallBack;
 import com.vk.cloudfirestorelisteners.constants.Constant;
-import com.vk.cloudfirestorelisteners.exception.ExceptionUtil;
 
-import java.util.HashMap;
 import java.util.Map;
+
+import static com.vk.cloudfirestorelisteners.constants.Constant.FAIL;
 
 public abstract class FirebaseRepository {
 
     /**
-     * Insert data on FireBase
+     * Insert data on FireStore
      *
-     * @param databaseReference Database reference of data to be add
-     * @param model Model to insert into database
+     * @param documentReference Document reference of data to be add
+     * @param model             Model to insert into Document
+     * @param callback          callback for event handling
+     */
+    protected final void fireStoreCreate(final DocumentReference documentReference, final Object model, final CallBack callback) {
+        documentReference.set(model).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void aVoid) {
+                callback.onSuccess(Constant.SUCCESS);
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                callback.onError(e);
+            }
+        });
+    }
+
+    /**
+     * Update data to FireStore
+     *
+     * @param documentReference Document reference of data to update
+     * @param map               Data map to update
+     * @param callback          callback for event handling
+     */
+    protected final void fireStoreUpdate(final DocumentReference documentReference, final Map<String, Object> map, final CallBack callback) {
+        documentReference.update(map).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void aVoid) {
+                callback.onSuccess(Constant.SUCCESS);
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                callback.onError(e);
+            }
+        });
+    }
+
+    /**
+     * FireStore Create or Merge
+     *
+     * @param documentReference Document reference of data to create update
+     * @param model             Model to create or update into Document
+     */
+    protected final void fireStoreCreateOrMerge(final DocumentReference documentReference, final Object model, final CallBack callback) {
+        documentReference.set(model, SetOptions.merge()).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void aVoid) {
+                callback.onSuccess(Constant.SUCCESS);
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                callback.onError(e);
+            }
+        });
+    }
+
+    /**
+     * Delete data from FireStore
+     *
+     * @param documentReference Document reference of data to delete
+     * @param callback          callback for event handling
+     */
+    protected final void fireStoreDelete(final DocumentReference documentReference, final CallBack callback) {
+        documentReference.delete().addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void aVoid) {
+                callback.onSuccess(Constant.SUCCESS);
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                callback.onError(e);
+            }
+        });
+    }
+
+    /**
+     * FireStore Batch write
+     *
+     * @param batch    Document reference of data to delete
      * @param callback callback for event handling
      */
-    protected final void fireBaseCreate(final DatabaseReference databaseReference, final Object model, final CallBack callback) {
-        databaseReference.keepSynced(true);
-        databaseReference.setValue(model, new DatabaseReference.CompletionListener() {
+    protected final void batchWrite(WriteBatch batch, final CallBack callback) {
+        batch.commit().addOnCompleteListener(new OnCompleteListener<Void>() {
             @Override
-            public void onComplete(DatabaseError databaseError, @NonNull DatabaseReference databaseReference) {
-                if (databaseError == null) {
+            public void onComplete(@NonNull Task<Void> task) {
+                if (task.isSuccessful())
                     callback.onSuccess(Constant.SUCCESS);
+                else
+                    callback.onError(FAIL);
+            }
+        });
+    }
+
+    /**
+     * One time data fetch from FireStore with Document reference
+     *
+     * @param documentReference query of Document reference to fetch data
+     * @param callBack          callback for event handling
+     */
+    protected final void readDocument(final DocumentReference documentReference, final CallBack callBack) {
+        documentReference.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document != null && document.exists()) {
+                        callBack.onSuccess(document);
+                    } else {
+                        callBack.onSuccess(null);
+                    }
                 } else {
-                    callback.onError(databaseError);
+                    callBack.onError(task.getException());
                 }
             }
         });
     }
 
     /**
-     * Update data to FireBase
+     * Data fetch listener with Document reference
      *
-     * @param databaseReference  Database reference of data to update
-     * @param map Data map to update
-     * @param callback callback for event handling
+     * @param documentReference to add childEvent listener
+     * @param callBack          callback for event handling
+     * @return EventListener
      */
-    protected final void fireBaseUpdateChildren(final DatabaseReference databaseReference, final Map map, final CallBack callback) {
-        databaseReference.keepSynced(true);
-        databaseReference.updateChildren(map, new DatabaseReference.CompletionListener() {
+    protected final ListenerRegistration readDocumentByListener(final DocumentReference documentReference, final CallBack callBack) {
+        return documentReference.addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
-            public void onComplete(DatabaseError databaseError,@NonNull  DatabaseReference databaseReference) {
-                if (databaseError == null) {
-                    callback.onSuccess(databaseError);
+            public void onEvent(@Nullable DocumentSnapshot snapshot,
+                                @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    callBack.onError(e);
+                    return;
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    callBack.onSuccess(snapshot);
                 } else {
-                    callback.onError(databaseError);
+                    callBack.onSuccess(null);
                 }
             }
         });
     }
 
     /**
-     * Delete data from firebase
+     * One time data fetch from FireStore with Query reference
      *
-     * @param databaseReference  Database reference of data to delete
-     * @param callback callback for event handling
+     * @param query    query of Document reference to fetch data
+     * @param callBack callback for event handling
      */
-    protected final void fireBaseDelete(final DatabaseReference databaseReference, final CallBack callback) {
-        databaseReference.keepSynced(true);
-        databaseReference.removeValue(new DatabaseReference.CompletionListener() {
+    protected final void readQueryDocuments(final Query query, final CallBack callBack) {
+        query.get().addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
             @Override
-            public void onComplete(DatabaseError databaseError,@NonNull  DatabaseReference databaseReference) {
-                if (databaseError == null) {
-                    callback.onSuccess(null);
+            public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                if (task.isSuccessful()) {
+                    QuerySnapshot querySnapshot = task.getResult();
+                    if (querySnapshot != null && !querySnapshot.isEmpty()) {
+                        callBack.onSuccess(querySnapshot);
+                    } else {
+                        callBack.onSuccess(null);
+                    }
                 } else {
-                    callback.onError(databaseError);
+                    callBack.onError(task.getException());
                 }
             }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                callBack.onError(e);
+            }
         });
     }
 
-
     /**
-     * Getting data from FireBase only single time
+     * Data fetch listener with Query reference
      *
-     * @param query  query of database reference to fetch data
-     * @param callback  callback for event handling
+     * @param query    query of Document reference to fetch data
+     * @param callBack callback for event handling
      */
-    protected final void fireBaseReadData(final Query query, final CallBack callback) {
-        query.keepSynced(true);
-        query.addListenerForSingleValueEvent(new ValueEventListener() {
+    protected final ListenerRegistration readQueryDocumentsByListener(final Query query, final CallBack callBack) {
+        return query.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                callback.onSuccess(dataSnapshot);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                callback.onError(databaseError);
+            public void onEvent(@Nullable QuerySnapshot value,
+                                @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    callBack.onError(e);
+                    return;
+                }
+                callBack.onSuccess(value);
             }
         });
     }
 
     /**
-     * Fetch data with child event listener
+     * Data fetch ChildEventListener with Query reference
      *
      * @param query    to add childEvent listener
-     * @param firebaseChildCallBack  callback for event handling
+     * @param callBack callback for event handling
      * @return ChildEventListener
      */
-    protected final ChildEventListener fireBaseChildEventListener(final Query query, final FirebaseChildCallBack firebaseChildCallBack) {
-        query.keepSynced(true);
-        return new ChildEventListener() {
+    protected final ListenerRegistration readQueryDocumentsByChildEventListener(final Query query, final FirebaseChildCallBack callBack) {
+        return query.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
-            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, String s) {
-                firebaseChildCallBack.onChildAdded(dataSnapshot);
+            public void onEvent(@Nullable QuerySnapshot snapshots,
+                                @Nullable FirebaseFirestoreException e) {
+                if (e != null || snapshots == null || snapshots.isEmpty()) {
+                    callBack.onCancelled(e);
+                    return;
+                }
+                for (DocumentChange documentChange : snapshots.getDocumentChanges()) {
+                    switch (documentChange.getType()) {
+                        case ADDED:
+                            callBack.onChildAdded(documentChange.getDocument());
+                            break;
+                        case MODIFIED:
+                            callBack.onChildChanged(documentChange.getDocument());
+                            break;
+                        case REMOVED:
+                            callBack.onChildRemoved(documentChange.getDocument());
+                            break;
+                    }
+                }
             }
-
-            @Override
-            public void onChildChanged(@NonNull DataSnapshot dataSnapshot, String s) {
-                firebaseChildCallBack.onChildChanged(dataSnapshot);
-            }
-
-            @Override
-            public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
-                firebaseChildCallBack.onChildRemoved(dataSnapshot);
-            }
-
-            @Override
-            public void onChildMoved(@NonNull DataSnapshot dataSnapshot, String s) {
-                firebaseChildCallBack.onChildMoved(dataSnapshot);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                firebaseChildCallBack.onCancelled(databaseError);
-            }
-        };
+        });
     }
 
     /**
-     * Fetch data with Value event listener
+     * REad offline data from FireBase
      *
-     * @param query    to add childEvent listener
-     * @param callback  callback for event handling
-     * @return ValueEventListener reference
+     * @param query Document reference of data to create
      */
-    protected final ValueEventListener fireBaseDataChangeListener(final Query query, final CallBack callback) {
-        query.keepSynced(true);
-        ValueEventListener valueEventListener = new ValueEventListener() {
+    protected final void fireStoreOfflineRead(final Query query, final CallBack callBack) {
+        query.addSnapshotListener(MetadataChanges.INCLUDE, new EventListener<QuerySnapshot>() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                callback.onSuccess(dataSnapshot);
+            public void onEvent(@Nullable QuerySnapshot querySnapshot,
+                                @Nullable FirebaseFirestoreException e) {
+                if (e != null) {
+                    callBack.onError(e);
+                    return;
+                }
+                callBack.onSuccess(querySnapshot);
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-                callback.onError(databaseError);
-            }
-        };
-        query.addValueEventListener(valueEventListener);
-        return valueEventListener;
+        });
     }
-
-    /**
-     * Insert offline data on FireBase
-     *
-     * @param databaseReference  Database reference of data to create
-     * @param model Model to insert into database
-     */
-    protected final void fireBaseOfflineCreate(final DatabaseReference databaseReference, final Object model) {
-        try {
-            databaseReference.keepSynced(true);
-            databaseReference.setValue(model);
-        } catch (Exception e) {
-            ExceptionUtil.errorMessage("Method: fireBaseOfflineCreateAndUpdate", "Class: FirebaseTemplateRepository", e);
-        }
-    }
-
-    /**
-     * update offline data on FireBase
-     *
-     * @param databaseReference  Database reference of data to update
-     * @param model Model to update into database
-     */
-    protected final void fireBaseOfflineUpdate(final DatabaseReference databaseReference, final String pushKey, final Object model) {
-        try {
-            databaseReference.keepSynced(true);
-            Map<String, Object> stringObjectMap = new HashMap<>();
-            stringObjectMap.put(pushKey, model);
-            databaseReference.updateChildren(stringObjectMap);
-
-        } catch (Exception e) {
-            ExceptionUtil.errorMessage("Method: fireBaseOfflineCreateAndUpdate", "Class: FirebaseTemplateRepository", e);
-        }
-    }
-
 }

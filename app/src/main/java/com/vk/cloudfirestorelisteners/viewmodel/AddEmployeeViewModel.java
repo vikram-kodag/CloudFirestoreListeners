@@ -16,6 +16,8 @@ import com.vk.cloudfirestorelisteners.view.activity.AddEmployeeActivity;
 import com.vk.cloudfirestorelisteners.R;
 import com.vk.cloudfirestorelisteners.databinding.ActivityAddEmployeeBinding;
 
+import static com.vk.cloudfirestorelisteners.utility.Utility.isEmptyOrNull;
+
 
 public class AddEmployeeViewModel {
     private AddEmployeeActivity addEmployeeActivity;
@@ -53,8 +55,10 @@ public class AddEmployeeViewModel {
             activityAddEmployeeBinding.btSave.setText(addEmployeeActivity.getText(R.string.update));
             activityAddEmployeeBinding.etEmpName.setText(employee.getEmpName());
             activityAddEmployeeBinding.etEmpDesignation.setText(employee.getDesignation());
+            activityAddEmployeeBinding.etEmpAge.setText(String.valueOf(employee.getAge()));
+            activityAddEmployeeBinding.etEmpSalary.setText(String.valueOf(employee.getSalary()));
             if (employee.getBranchDetails() != null) {
-                activityAddEmployeeBinding.etBranchId.setText(employee.getBranchDetails().getBranchId().replace(Constant.BR,""));
+                activityAddEmployeeBinding.etBranchId.setText(employee.getBranchDetails().getBranchId().replace(Constant.BR, ""));
                 activityAddEmployeeBinding.etBranchName.setText(employee.getBranchDetails().getBranchName());
                 activityAddEmployeeBinding.etBranchLocation.setText(employee.getBranchDetails().getBranchLocation());
             }
@@ -107,7 +111,7 @@ public class AddEmployeeViewModel {
 
     private boolean validate() {
         boolean isValid = true;
-        if (Utility.isEmptyOrNull(activityAddEmployeeBinding.etEmpName.getText().toString())) {
+        if (isEmptyOrNull(activityAddEmployeeBinding.etEmpName.getText().toString())) {
             activityAddEmployeeBinding.etEmpName.setError(addEmployeeActivity.getString(R.string.emp_name_error));
             isValid = false;
         }
@@ -118,12 +122,21 @@ public class AddEmployeeViewModel {
         Employee employee = new Employee();
         employee.setEmpName(activityAddEmployeeBinding.etEmpName.getText().toString());
         employee.setDesignation(activityAddEmployeeBinding.etEmpDesignation.getText().toString());
+        if (!isEmptyOrNull(activityAddEmployeeBinding.etEmpAge.getText().toString().trim()))
+            employee.setAge(Integer.parseInt(activityAddEmployeeBinding.etEmpAge.getText().toString()));
+        else
+            employee.setAge(0);
+        if (!isEmptyOrNull(activityAddEmployeeBinding.etEmpSalary.getText().toString().trim()))
+            employee.setSalary(Long.parseLong(activityAddEmployeeBinding.etEmpSalary.getText().toString()));
+        else
+            employee.setSalary(0);
         if (this.employee == null)
             employee.setEmpId(Utility.getNewId());
         BranchDetails branchDetails = new BranchDetails();
         branchDetails.setBranchName(activityAddEmployeeBinding.etBranchName.getText().toString());
         branchDetails.setBranchId(Constant.BR + activityAddEmployeeBinding.etBranchId.getText().toString());
         branchDetails.setBranchLocation(activityAddEmployeeBinding.etBranchLocation.getText().toString());
+
         employee.setBranchDetails(branchDetails);
         return employee;
     }

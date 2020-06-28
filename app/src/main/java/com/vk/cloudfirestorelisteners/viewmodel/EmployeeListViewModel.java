@@ -10,16 +10,16 @@ import androidx.recyclerview.widget.DefaultItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.vk.cloudfirestorelisteners.R;
 import com.vk.cloudfirestorelisteners.callback.FirebaseChildCallBack;
 import com.vk.cloudfirestorelisteners.databinding.ActivityEmployeeListBinding;
-import com.vk.cloudfirestorelisteners.firebase.FirebaseRequestModel;
-import com.vk.cloudfirestorelisteners.firebase.FirebaseUtility;
+import com.vk.cloudfirestorelisteners.exception.ExceptionUtil;
 import com.vk.cloudfirestorelisteners.helper.IndexedLinkedHashMap;
 import com.vk.cloudfirestorelisteners.model.Employee;
 import com.vk.cloudfirestorelisteners.repository.EmployeeRepository;
 import com.vk.cloudfirestorelisteners.repository.impl.EmployeeRepositoryImpl;
-import com.vk.cloudfirestorelisteners.utility.Utility;
 import com.vk.cloudfirestorelisteners.view.activity.AddEmployeeActivity;
 import com.vk.cloudfirestorelisteners.view.activity.EmployeeListActivity;
 import com.vk.cloudfirestorelisteners.view.adapter.EmployeeDetailsAdapter;
@@ -34,7 +34,8 @@ public class EmployeeListViewModel {
     private EmployeeListActivity employeeListActivity;
     private EmployeeDetailsAdapter employeeDetailsAdapter;
     private EmployeeRepository employeeRepository;
-    private FirebaseRequestModel firebaseRequestModel;
+    private ListenerRegistration listenerRegistration;
+    private String TAG = "EmployeeListViewModel";
 
     public EmployeeListViewModel(EmployeeListActivity employeeListActivity, ActivityEmployeeListBinding activityEmployeeListBinding) {
         this.activityEmployeeListBinding = activityEmployeeListBinding;
@@ -77,9 +78,9 @@ public class EmployeeListViewModel {
     }
 
     private void getAllEmployees() {
-        if (firebaseRequestModel != null)
-            removeListener();
-        firebaseRequestModel = employeeRepository.readAllEmployeesByChildEvent(new FirebaseChildCallBack() {
+        if (listenerRegistration != null)
+            listenerRegistration.remove();
+        listenerRegistration = employeeRepository.readAllEmployeesByChildEvent(new FirebaseChildCallBack() {
             @Override
             public void onChildAdded(Object object) {
                 if (object != null) {
@@ -110,19 +111,17 @@ public class EmployeeListViewModel {
             }
 
             @Override
-            public void onChildMoved(Object object) {
-
-            }
-
-            @Override
             public void onCancelled(Object object) {
-                Utility.showMessage(employeeListActivity, employeeListActivity.getString(R.string.some_thing_went_wrong));
+                if (object != null)
+                    ExceptionUtil.errorMessage(TAG, "getAllEmployees", new Exception(object.toString()));
             }
         });
     }
 
     public void removeListener() {
-        FirebaseUtility.removeFireBaseChildListener(employeeListActivity, firebaseRequestModel);
+        if (listenerRegistration != null)
+            listenerRegistration.remove();
+        Glide.get(employeeListActivity).clearMemory();//clear memory
     }
 
     public void setFabClickListener() {

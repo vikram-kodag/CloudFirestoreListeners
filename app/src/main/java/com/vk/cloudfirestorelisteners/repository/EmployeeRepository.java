@@ -1,9 +1,9 @@
 package com.vk.cloudfirestorelisteners.repository;
 
 
+import com.google.firebase.firestore.ListenerRegistration;
 import com.vk.cloudfirestorelisteners.callback.CallBack;
 import com.vk.cloudfirestorelisteners.callback.FirebaseChildCallBack;
-import com.vk.cloudfirestorelisteners.firebase.FirebaseRequestModel;
 import com.vk.cloudfirestorelisteners.model.Employee;
 
 import java.util.HashMap;
@@ -17,11 +17,13 @@ public interface EmployeeRepository {
 
     void readEmployeeByKey(String employeeKey, CallBack callBack);
 
-    void readEmployeeByName(String employeeName, CallBack callBack);
+    void readEmployeesByDesignationAndBranch(String designation, String branch, CallBack callBack);
 
     void readAllEmployeesBySingleValueEvent(CallBack callBack);
 
-    FirebaseRequestModel readAllEmployeesByDataChangeEvent(CallBack callBack);
+    ListenerRegistration readAllEmployeesByDataChangeEvent(CallBack callBack);
 
-    FirebaseRequestModel readAllEmployeesByChildEvent(FirebaseChildCallBack firebaseChildCallBack);
+    ListenerRegistration readAllEmployeesByChildEvent(FirebaseChildCallBack firebaseChildCallBack);
+
+    void readEmployeesSalaryGraterThanLimit(long limit, CallBack callBack);
 }
